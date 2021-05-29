@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GraphQL" Version="4.5.0" />
+    <PackageReference Include="GraphQL.DataLoader" Version="4.5.0" />
+    <PackageReference Include="GraphQL.MicrosoftDI" Version="4.5.0" />
+    <PackageReference Include="GraphQL.SystemTextJson" Version="4.5.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StarWars\StarWars.csproj" />
+  </ItemGroup>
+
+</Project>
