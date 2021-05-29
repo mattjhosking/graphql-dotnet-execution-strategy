@@ -1,16 +1,15 @@
+using StarWars.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using GraphQL;
-using StarWars.Types;
 
 namespace StarWars
 {
     public class StarWarsData
     {
-        private readonly List<Human> _humans = new List<Human>();
-        private readonly List<Droid> _droids = new List<Droid>();
+        private readonly List<Human> _humans = new();
+        private readonly List<Droid> _droids = new();
 
         public StarWarsData()
         {
@@ -33,6 +32,7 @@ namespace StarWars
             _droids.Add(new Droid
             {
                 Id = "3",
+                OwnerId = "1",
                 Name = "R2-D2",
                 Friends = new[] { "1", "4" },
                 AppearsIn = new[] { 4, 5, 6 },
@@ -41,17 +41,18 @@ namespace StarWars
             _droids.Add(new Droid
             {
                 Id = "4",
+                OwnerId = "1",
                 Name = "C-3PO",
                 AppearsIn = new[] { 4, 5, 6 },
                 PrimaryFunction = "Protocol"
             });
         }
 
-        public IEnumerable<StarWarsCharacter> GetFriends(StarWarsCharacter character)
+        public virtual IEnumerable<StarWarsCharacter> GetFriends(StarWarsCharacter? character)
         {
             if (character == null)
             {
-                return null;
+                return Array.Empty<StarWarsCharacter>();
             }
 
             var friends = new List<StarWarsCharacter>();
@@ -64,17 +65,44 @@ namespace StarWars
             return friends;
         }
 
-        public Task<Human> GetHumanByIdAsync(string id)
+
+        public virtual Task<ILookup<string, StarWarsCharacter>> GetFriendsForIdsAsync(string?[] ids)
+        {
+            StarWarsCharacter[] allCharacters = _humans.Cast<StarWarsCharacter>().Concat(_droids).ToArray();
+            return Task.FromResult(allCharacters
+                .Where(x => ids.Contains(x.Id))
+                .Select(character => new { Id = character.Id ?? "N/A", Friends = allCharacters.Where(x => character.Friends != null && character.Friends.Contains(x.Id)) })
+                .SelectMany(x => x.Friends.Select(f => new { x.Id, Friend = f }))
+                .ToLookup(x => x.Id, x => x.Friend));
+        }
+
+        public virtual Task<Human?> GetHumanByIdAsync(string id)
         {
             return Task.FromResult(_humans.FirstOrDefault(h => h.Id == id));
         }
 
-        public Task<Droid> GetDroidByIdAsync(string id)
+        public virtual Task<Droid?> GetDroidByIdAsync(string id)
         {
             return Task.FromResult(_droids.FirstOrDefault(h => h.Id == id));
         }
 
-        public Human AddHuman(Human human)
+        public virtual Task<IEnumerable<Droid>> GetDroidsByIdsAsync(string?[] ids)
+        {
+            return Task.FromResult<IEnumerable<Droid>>(_droids.Where(h => ids.Contains(h.Id)).ToList());
+        }
+
+        public virtual Task<ILookup<string?, StarWarsCharacter>> GetDroidOwnersByIdsAsync(string?[] ids)
+        {
+            var droidRetrieval = _droids.ToDictionary(x => x.Id ?? "");
+            var characterRetrieval = _humans.Cast<StarWarsCharacter>().Concat(_droids).ToDictionary(x => x.Id ?? "");
+            return Task.FromResult(ids
+                .Select(x => droidRetrieval[x ?? ""])
+                .Where(x => x.OwnerId != null)
+                .Select(x => new { x.Id, Owner = characterRetrieval[x.OwnerId ?? ""] })
+                .ToLookup(x => x.Id, x => x.Owner));
+        }
+
+        public virtual Human AddHuman(Human human)
         {
             human.Id = Guid.NewGuid().ToString();
             _humans.Add(human);

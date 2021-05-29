@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -100,8 +101,7 @@ namespace GraphQL.ExecutionStrategy
                     }
 
                     var pendingLoaderGraphTypes = pendingDataLoaders
-                        .Select(x => GetGraphType(x, context)?.Name)
-                        .Where(x => x != null)
+                        .SelectMany(x => GetGraphTypes(x, context).Select(t => t.Name))
                         .ToHashSet();
 
                     // always process priority data loaders first as they potentially block others that can be batched in
@@ -148,40 +148,50 @@ namespace GraphQL.ExecutionStrategy
             }
         }
 
-        private static IObjectGraphType? GetGraphType(ExecutionNode executionNode, ExecutionContext context)
+        private static IObjectGraphType[] GetGraphTypes(ExecutionNode executionNode, ExecutionContext context)
         {
-            IObjectGraphType? graphType = null;
+            IGraphType? graphType = null;
             switch (executionNode)
             {
+                case ValueExecutionNode:
+                    return Array.Empty<IObjectGraphType>();
                 case ObjectExecutionNode objectNode:
-                    graphType = objectNode.GetObjectGraphType(context.Schema);
+                    graphType = objectNode.GraphType;
                     break;
                 case ArrayExecutionNode arrayNode:
-                {
-                    var listType = (ListGraphType)arrayNode.GraphType;
-                    var itemType = listType.ResolvedType;
-                    if (itemType is NonNullGraphType nonNullGraphType)
-                        itemType = nonNullGraphType.ResolvedType;
-                    if (itemType != null)
-                        graphType = itemType as IObjectGraphType;
-                    break;
-                }
+                    {
+                        graphType = ((ListGraphType)arrayNode.GraphType).ResolvedType;
+                        break;
+                    }
             }
 
-            return graphType;
+            if (graphType is NonNullGraphType nonNullGraphType)
+                graphType = nonNullGraphType.ResolvedType;
+
+            return graphType switch
+            {
+                IInterfaceGraphType interfaceGraphType => interfaceGraphType.PossibleTypes.ToArray(),
+                IObjectGraphType objectGraphType => new[] { objectGraphType },
+                _ => Array.Empty<IObjectGraphType>()
+            };
         }
 
-        private bool HasChildOfGraphType(ExecutionNode executionNode, ExecutionContext context, ISet<string?> graphTypes)
+        private bool HasChildOfGraphType(ExecutionNode executionNode, ExecutionContext context, ISet<string> searchGraphTypes)
         {
-            var graphType = GetGraphType(executionNode, context);
-            return CollectFieldsFrom(context, graphType, executionNode.Field?.SelectionSet, null)
-                .Select(x => new
-                {
-                    Field = x.Value,
-                    FieldDefinition = GetFieldDefinition(context.Schema, graphType, x.Value)
-                })
-                .Select(x => BuildExecutionNode(executionNode, x.FieldDefinition.ResolvedType, x.Field, x.FieldDefinition))
-                .Any(x => graphTypes.Contains(x.GraphType.Name) || HasChildOfGraphType(x, context, graphTypes));
+            var graphTypes = GetGraphTypes(executionNode, context);
+            if (graphTypes.Length == 0)
+                return false;
+
+            return graphTypes
+                .Any(graphType => CollectFieldsFrom(context, graphType, executionNode.Field?.SelectionSet, null)
+                    .Select(x => new
+                    {
+                        Field = x.Value,
+                        FieldDefinition = GetFieldDefinition(context.Schema, graphType, x.Value)
+                    })
+                    .Select(x => BuildExecutionNode(executionNode, x.FieldDefinition.ResolvedType, x.Field, x.FieldDefinition))
+                    .Any(x => GetGraphTypes(x, context).Any(t => searchGraphTypes.Contains(t.Name)) || HasChildOfGraphType(x, context, searchGraphTypes))
+                );
         }
     }
 }

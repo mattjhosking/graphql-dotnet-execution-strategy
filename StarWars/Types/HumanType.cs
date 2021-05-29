@@ -1,10 +1,13 @@
+using System.Linq;
+using GraphQL;
+using GraphQL.DataLoader;
 using GraphQL.Types;
 
 namespace StarWars.Types
 {
     public class HumanType : ObjectGraphType<Human>
     {
-        public HumanType(StarWarsData data)
+        public HumanType(StarWarsData data, IDataLoaderContextAccessor dataLoader)
         {
             Name = "Human";
 
@@ -13,7 +16,11 @@ namespace StarWars.Types
 
             Field<ListGraphType<CharacterInterface>>(
                 "friends",
-                resolve: context => data.GetFriends(context.Source)
+                resolve: context =>
+                {
+                    var loader = dataLoader.Context.GetOrAddCollectionBatchLoader<string, StarWarsCharacter>(nameof(data.GetFriendsForIdsAsync), ids => data.GetFriendsForIdsAsync(ids.ToArray()));
+                    return loader.LoadAsync(context.Source.Id ?? "");
+                }
             );
             Field<ListGraphType<EpisodeEnum>>("appearsIn", "Which movie they appear in.");
 

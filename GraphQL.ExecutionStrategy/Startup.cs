@@ -1,3 +1,4 @@
+using GraphQL.DataLoader;
 using GraphQL.Instrumentation;
 using GraphQL.Types;
 using Microsoft.AspNetCore.Builder;
@@ -36,6 +37,8 @@ namespace GraphQL.ExecutionStrategy
             services.AddSingleton<CharacterInterface>();
             services.AddSingleton<EpisodeEnum>();
             services.AddSingleton<ISchema, StarWarsSchema>();
+            services.AddSingleton<IDataLoaderContextAccessor, DataLoaderContextAccessor>();
+            services.AddSingleton<DataLoaderDocumentListener>();
 
             services.AddCors();
             services.AddLogging(builder => builder.AddConsole());

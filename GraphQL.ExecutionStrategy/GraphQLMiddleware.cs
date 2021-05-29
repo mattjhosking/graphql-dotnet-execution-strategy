@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using GraphQL.DataLoader;
 using GraphQL.Instrumentation;
 
 namespace GraphQL.ExecutionStrategy
@@ -31,7 +32,7 @@ namespace GraphQL.ExecutionStrategy
             _writer = writer;
         }
 
-        public async Task Invoke(HttpContext context, ISchema schema)
+        public async Task Invoke(HttpContext context, ISchema schema, DataLoaderDocumentListener listener)
         {
             if (!IsGraphQLRequest(context))
             {
@@ -39,7 +40,7 @@ namespace GraphQL.ExecutionStrategy
                 return;
             }
 
-            await ExecuteAsync(context, schema);
+            await ExecuteAsync(context, schema, listener);
         }
 
         private bool IsGraphQLRequest(HttpContext context)
@@ -48,7 +49,7 @@ namespace GraphQL.ExecutionStrategy
                 && string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task ExecuteAsync(HttpContext context, ISchema schema)
+        private async Task ExecuteAsync(HttpContext context, ISchema schema, DataLoaderDocumentListener listener)
         {
             var request = await Deserialize<GraphQLRequest>(context.Request.Body);
             if (request == null)
@@ -68,6 +69,7 @@ namespace GraphQL.ExecutionStrategy
                     _.UserContext = _settings.BuildUserContext?.Invoke(context);
                     _.ValidationRules = DocumentValidator.CoreRules.Concat(new[] { new InputValidationRule() });
                     _.EnableMetrics = _settings.EnableMetrics;
+                    _.Listeners.Add(listener);
                 });
 
                 result.EnrichWithApolloTracing(start);
