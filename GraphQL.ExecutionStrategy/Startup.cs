@@ -24,7 +24,7 @@ namespace GraphQL.ExecutionStrategy
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IDocumentExecuter, DocumentExecuter>();
+            services.AddSingleton<IDocumentExecuter, OptimisedDocumentExecutor>();
             services.AddSingleton<IDocumentWriter, GraphQL.SystemTextJson.DocumentWriter>();
 
             services.AddSingleton<StarWarsData>();
@@ -42,10 +42,6 @@ namespace GraphQL.ExecutionStrategy
             services.AddHttpContextAccessor();
 
             services.AddControllers();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "GraphQL.ApolloStudio", Version = "v1" });
-            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -56,8 +52,6 @@ namespace GraphQL.ExecutionStrategy
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "GraphQL.ApolloStudio v1"));
             }
 
             app.UseRouting();
