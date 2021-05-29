@@ -120,6 +120,8 @@ namespace GraphQL.ExecutionStrategy.Tests
 
             timings.Should().HaveCount(2);
             // Ensure it's no more than 150% of the time to execute the default strategy
+            // In an I/O bound scenario this will be the CPU time difference (here there is no I/O)
+            // In most cases less I/O is much more valuable than less CPU usage (to a point)
             (timings[1] / timings[0]).Should().BeLessThan(1.5);
         }
     }
