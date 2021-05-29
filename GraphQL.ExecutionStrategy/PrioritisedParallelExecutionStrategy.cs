@@ -101,7 +101,7 @@ namespace GraphQL.ExecutionStrategy
                     }
 
                     var pendingLoaderGraphTypes = pendingDataLoaders
-                        .SelectMany(x => GetGraphTypes(x, context).Select(t => t.Name))
+                        .SelectMany(x => GetGraphTypes(x).Select(t => t.Name))
                         .ToHashSet();
 
                     // always process priority data loaders first as they potentially block others that can be batched in
@@ -148,7 +148,7 @@ namespace GraphQL.ExecutionStrategy
             }
         }
 
-        private static IObjectGraphType[] GetGraphTypes(ExecutionNode executionNode, ExecutionContext context)
+        private static IObjectGraphType[] GetGraphTypes(ExecutionNode executionNode)
         {
             IGraphType? graphType = null;
             switch (executionNode)
@@ -178,7 +178,7 @@ namespace GraphQL.ExecutionStrategy
 
         private bool HasChildOfGraphType(ExecutionNode executionNode, ExecutionContext context, ISet<string> searchGraphTypes)
         {
-            var graphTypes = GetGraphTypes(executionNode, context);
+            var graphTypes = GetGraphTypes(executionNode);
             if (graphTypes.Length == 0)
                 return false;
 
@@ -190,7 +190,7 @@ namespace GraphQL.ExecutionStrategy
                         FieldDefinition = GetFieldDefinition(context.Schema, graphType, x.Value)
                     })
                     .Select(x => BuildExecutionNode(executionNode, x.FieldDefinition.ResolvedType, x.Field, x.FieldDefinition))
-                    .Any(x => GetGraphTypes(x, context).Any(t => searchGraphTypes.Contains(t.Name)) || HasChildOfGraphType(x, context, searchGraphTypes))
+                    .Any(x => GetGraphTypes(x).Any(t => searchGraphTypes.Contains(t.Name)) || HasChildOfGraphType(x, context, searchGraphTypes))
                 );
         }
     }
