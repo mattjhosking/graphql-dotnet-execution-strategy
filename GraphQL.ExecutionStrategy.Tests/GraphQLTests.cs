@@ -2,6 +2,7 @@ using FluentAssertions;
 using GraphQL.Client.Abstractions;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
+using GraphQL.Instrumentation;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -10,8 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using GraphQL.Instrumentation;
-using Moq;
 using Xunit;
 
 namespace GraphQL.ExecutionStrategy.Tests
