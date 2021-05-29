@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using GraphQL.Instrumentation;
 
 namespace GraphQL.ExecutionStrategy
 {
@@ -56,6 +57,8 @@ namespace GraphQL.ExecutionStrategy
             }
             else
             {
+                var start = DateTime.UtcNow;
+
                 var result = await _executer.ExecuteAsync(_ =>
                 {
                     _.Schema = schema;
@@ -66,6 +69,8 @@ namespace GraphQL.ExecutionStrategy
                     _.ValidationRules = DocumentValidator.CoreRules.Concat(new[] { new InputValidationRule() });
                     _.EnableMetrics = _settings.EnableMetrics;
                 });
+
+                result.EnrichWithApolloTracing(start);
 
                 await WriteResponseAsync(context, result);
             }
@@ -81,8 +86,7 @@ namespace GraphQL.ExecutionStrategy
 
         public static async Task<T?> Deserialize<T>(Stream s)
         {
-            using (var reader = new StreamReader(s))
-                return await JsonSerializer.DeserializeAsync<T>(s, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            return await JsonSerializer.DeserializeAsync<T>(s, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
     }
 }
